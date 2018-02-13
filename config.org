@@ -1,0 +1,257 @@
+
+* Emacs configuration
+** Setup server
+#+BEGIN_SRC emacs-lisp
+(server-start)
+#+END_SRC
+** Path
+#+BEGIN_SRC emacs-lisp
+(setq exec-path (append exec-path '("~/bin")))
+#+END_SRC
+
+#+RESULTS:
+| /usr/local/sbin | /usr/local/bin | /usr/bin | /usr/bin/site_perl | /usr/bin/vendor_perl | /usr/bin/core_perl | /usr/lib/emacs/25.2/x86_64-unknown-linux-gnu | ~/bin |
+
+** Font
+#+BEGIN_SRC emacs-lisp
+  (set-face-attribute 'default nil :height 130)
+#+END_SRC
+
+#+RESULTS:
+
+** package-archives
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'package-archives '("marmalade" . "https://marmalade-repo.org/packages/"))
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+  (add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t) ; Org-mode's repository
+#+END_SRC
+
+#+RESUL:
+
+** general editor stuff
+  - this is for navigation and project manegment
+#+BEGIN_SRC emacs-lisp
+(require 'better-defaults)
+(require 'ack)
+(require 'ack-and-a-half)
+(require 'dashboard)
+(require 'company)
+(require 'dash)
+
+(require 'markdown-mode)
+(require 'find-file-in-project)
+(require 'rainbow-delimiters)
+
+(global-set-key (kbd "C-.") 'company-complete)
+(global-set-key (kbd "C-x C-p") 'ack-and-a-half)
+(global-set-key (kbd "C-x f") 'find-file-in-project)
+
+(global-set-key (kbd "C-c C-<up>") 'windmove-up)
+(global-set-key (kbd "C-c C-<down>") 'windmove-down)
+(global-set-key (kbd "C-c C-<left>") 'windmove-left)
+(global-set-key (kbd "C-c C-<right>") 'windmove-right)
+
+(add-hook 'after-init-hook 'global-company-mode)
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+(global-set-key (kbd "C-,") 'avy-goto-char)
+#+END_SRC
+
+#+RESULTS:
+: avy-goto-char
+
+** global setups
+#+BEGIN_SRC emacs-lisp
+(dashboard-setup-startup-hook)
+(setq dashboard-items '((recents  . 5)))
+(global-prettify-symbols-mode 1)
+
+(defalias 'yes-or-no-p 'y-or-n-p)
+(load-theme 'zenburn t)
+
+(when (fboundp 'windmove-default-keybindings)
+  (windmove-default-keybindings))
+
+(setq cider-repl-display-help-banner nil)
+#+END_SRC
+** Evil setup
+#+BEGIN_SRC emacs-lisp
+  (require 'evil)
+
+  (evil-mode 1)
+
+  (define-key evil-insert-state-map (kbd "C-d") 'delete-char)
+
+  (-map
+   (lambda (mode) (evil-set-initial-state mode 'emacs))
+   '())
+#+END_SRC
+
+#+RESULTS:
+
+** Paredit Config
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'paredit-mode-hook 'my/paredit-mode-hook)
+
+  (defun my/paredit-mode-hook ()
+    (local-set-key (kbd "C-M-c") 'paredit-backward-slurp-sexp)
+    (local-set-key (kbd "C-M-v") 'paredit-forward-slurp-sexp)
+    (local-set-key (kbd "C-M-o") 'paredit-splice-sexp-killing-backward))
+
+#+END_SRC
+** Emacs Lisp
+#+BEGIN_SRC emacs-lisp
+
+(add-hook 'emacs-lisp-mode-hook 'my/emacs-lisp-init)
+(defun my/emacs-lisp-init ()
+  (paredit-mode 1)
+  (rainbow-delimiters-mode 1))
+
+#+END_SRC
+** Org Mode
+   #+BEGIN_SRC emacs-lisp
+     (require 'org-bullets)
+     (require 'org-alert)
+
+     (global-set-key (kbd "C-M-a") 'org-agenda)
+     (global-set-key (kbd "C-M-q") 'my/open-notes)
+
+     (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+
+     (add-to-list 'org-agenda-files "~/Dropbox/notes/NOTES.org")
+     (add-to-list 'org-agenda-files "~/Dropbox/notes/NOTES_ARCHIVE.org")
+     (setq org-directory "~/Dropbox/notes/")
+     (setq org-mobile-directory "~/Dropbox/mobileorg")
+     (setq org-mobile-inbox-for-pull "~/Dropbox/mobileorg/index")
+
+     ;(setq alert-default-style 'libnotify)
+     ;(org-alert-enable)
+
+     (setq org-src-fontify-natively t)
+
+     (defun my/open-notes ()
+       (interactive)
+       (switch-to-buffer (find-file-noselect "~/Dropbox/notes/NOTES.org")))
+
+   #+END_SRC
+
+   #+RESULTS:
+   : my/open-notes
+
+** Clojure setup
+#+BEGIN_SRC emacs-lisp
+  (require 'clojure-mode)
+  (require 'cider-mode)
+  (require 'clj-refactor)
+
+  (cider-repl-toggle-pretty-printing)
+
+  (global-set-key (kbd "C-M-m") 'cljr-add-missing-libspec)
+  (global-set-key (kbd "C-M-r") 'my/refresh-cider-session)
+  (global-set-key (kbd "C-M-l") 'my/reset-and-test)
+
+  (add-hook 'clojure-mode-hook 'my/clojure-mode-init)
+  (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
+  (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion)
+  (eval-after-load 'flycheck '(flycheck-clojure-setup))
+  ;;(add-hook 'after-init-hook #'global-flycheck-mode)
+  (eval-after-load 'flycheck
+    '(setq flycheck-display-errors-function #'flycheck-pos-tip-error-messages))
+
+  (defun my/clojure-mode-init ()
+    (paredit-mode 1)
+    (rainbow-delimiters-mode 1)
+    (yas-minor-mode 1)
+    (clj-refactor-mode 1)
+    (cljr-add-keybindings-with-prefix "C-c C-m")
+
+    (modify-syntax-entry ?_ "w")
+    (modify-syntax-entry ?- "w"))
+
+  (defun my/refresh-cider-session ()
+    (interactive)
+    (message "resetting session")
+    (cider-nrepl-send-sync-request '("op" "eval" "code" "(reloaded.repl/reset)"))
+    (message "session resset"))
+
+  (defun my/reset-and-test ()
+    (interactive)
+    (save-some-buffers)
+    (my/refresh-cider-session)
+    (cider-test-run-loaded-tests))
+#+END_SRC
+
+** Rust
+#+BEGIN_SRC emacs-lisp
+  (require 'rust-mode)
+  (require 'racer)
+
+  (add-hook 'rust-mode-hook 'my/rust-mode-init)
+
+  (defun my/rust-mode-init ()
+    (racer-mode 1)
+    (smartparens-mode 1)
+    (modify-syntax-entry ?_ "w"))
+
+#+END_SRC
+
+#+RESULTS:
+: my/rust-mode-init
+
+** Magit
+#+BEGIN_SRC emacs-lisp
+  (require 'magit)
+  (require 'evil-magit)
+
+  ;;(magithub-feature-autoinject t)
+
+  (global-set-key (kbd "C-x C-g") 'magit-status)
+#+END_SRC
+** Ido
+#+BEGIN_SRC emacs-lisp
+  (require 'ido-ubiquitous)
+  (require 'smex)
+
+  (ido-mode 1)
+  (ido-everywhere 1)
+  (ido-ubiquitous-mode 1)
+
+  (smex-initialize)
+  (global-set-key (kbd "M-x") 'smex)
+  (global-set-key (kbd "M-X") 'smex-major-mode-commands)
+  ;; This is your old M-x.
+  (global-set-key (kbd "C-c C-c M-x") 'execute-extended-command)
+
+#+END_SRC
+** Helm
+   disable helm it sucs
+#+BEGIN_SRC emacs-lisp
+;; (require 'helm-config)
+;; (global-set-key (kbd "M-x") #'helm-M-x)
+;; (global-set-key (kbd "C-x r b") #'helm-filtered-bookmarks)
+;; (global-set-key (kbd "C-x C-f") #'helm-find-files)
+;; (helm-mode 1)
+#+END_SRC
+
+#+RESULTS:
+: t
+** seq.el
+   this function is missing from the version of seq thats installed
+#+BEGIN_SRC emacs-lisp
+  (defun seq-map-indexed (function sequence)
+    "Return the result of applying FUNCTION to each element of SEQUENCE.
+     Unlike `seq-map', FUNCTION takes two arguments: the element of
+     the sequence, and its index within the sequence."
+    (let ((index 0))
+      (seq-map (lambda (elt)
+                 (prog1
+                     (funcall function elt index)
+                   (setq index (1+ index))))
+               sequence)))
+#+END_SRC
+** expand region
+#+BEGIN_SRC emacs-lisp
+  (require 'expand-region)
+
+  (global-set-key (kbd "M-+") 'er/expand-region)
+#+END_SRC
